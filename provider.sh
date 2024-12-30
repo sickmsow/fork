@@ -1,9 +1,18 @@
 #!/bin/bash
+set -e
+trap 'echo "❌ An error occurred. Exiting..."; exit 1;' ERR
 
-# Check if the script is run as root
-if [ "$(id -u)" -ne 0 ]; then
-    echo "❌ This script must be run as root or with sudo."
-    exit 1
+exec > >(tee -i /var/log/docker_install.log) 2>&1
+
+# Check if the script is run as root or with sudo privileges
+if [ "$(id -u)" -eq 0 ]; then
+    echo "⚠️ Warning: This script is running as root. Proceeding..."
+else
+    echo "🔒 Running as a non-root user. Sudo privileges are required for installation."
+    if ! sudo -v; then
+        echo "❌ You must have sudo privileges to run this script."
+        exit 1
+    fi
 fi
 
 # Check if Docker is already installed
@@ -11,6 +20,18 @@ if command -v docker &>/dev/null; then
     echo "✅ Docker is already installed."
     docker --version
     exit 0
+fi
+
+# Detect OS
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [[ "$ID" != "ubuntu" ]]; then
+        echo "❌ Unsupported OS: $ID"
+        exit 1
+    fi
+else
+    echo "❌ Unable to detect OS. Exiting..."
+    exit 1
 fi
 
 # Uninstall conflicting packages
@@ -42,9 +63,14 @@ echo "⚙️ Starting Docker service..."
 sudo systemctl enable docker
 sudo systemctl start docker
 
+# Add the current user to the Docker group
+echo "🔒 Adding the current user to the Docker group..."
+sudo usermod -aG docker $USER
+echo "⚠️ You need to log out and log back in to use Docker without sudo."
+
 # Verify installation
 if command -v docker &>/dev/null; then
-    echo "🎉 Docker has been successfully installed! Jaajef !!!"
+    echo "🎉 Docker has been successfully installed!"
     docker --version
 else
     echo "❌ Docker installation failed."
