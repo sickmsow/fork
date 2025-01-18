@@ -3,11 +3,25 @@ import {
 } from "https://deno.land/x/polkadot@0.2.45/util-crypto/mod.ts";
 import { Keyring } from "https://deno.land/x/polkadot@0.2.45/keyring/mod.ts";
 import { stringToU8a, u8aToHex } from "https://deno.land/x/polkadot@0.2.45/util/mod.ts";
+import "jsr:@std/dotenv/load";
+import { KeyringPair } from "https://deno.land/x/polkadot@0.2.45/keyring/types.ts";
 
-export async function signMessage(message: string, mnemonic: string) {
-  await cryptoWaitReady();
-  const keyring = new Keyring();
-  const pair = keyring.createFromUri(mnemonic);
+
+// Store locally validation state
+const state = {
+  isValidated: false,
+  isRegistered: false
+};
+
+let pair: KeyringPair  | null = null;
+let providers_url: string  | null = null;
+let healthstats_url: string  | null = null;
+
+export async function signMessage(message: string) {
+
+  if (!pair) {
+    await setupWallet();
+  }
   const signature = u8aToHex(pair.sign(stringToU8a(message)));
   return { signature, address: pair.address };
 }
@@ -95,33 +109,19 @@ async function getSystemStats() {
   return stats;
 }
 
-async function main() {
+async function sendHealthCheck() {
   const stats = await getSystemStats();
-
-  const message =
-    `CPU Usage: ${stats.cpu_usage}, Memory Free: ${stats.memory_free}, ` +
-    `Disk Free: ${stats.disk_free}, Docker Status: ${stats.docker_status}, ` +
-    `Running Containers: ${stats.running_containers}, ` +
-    `Unhealthy Containers: ${stats.unhealthy_containers}`;
-
-  const MNEMONIC = Deno.env.get("MNEMONIC") || "";
+  const message = JSON.stringify(stats);
   
-  const baseUrl = Deno.env.get("HEALTH_CHECK_API") || "localhost:8000/sigverif";
-  const HEALTH_CHECK_API = baseUrl.startsWith("http://") || baseUrl.startsWith("https://")
-    ? baseUrl
-    : `http://${baseUrl}`;
+  const signedMessage = await signMessage(message);
 
-  const signedMessage = await signMessage(message, MNEMONIC);
-
-  // Send health check
   try {
-    const response = await fetch(HEALTH_CHECK_API, {
+    const response = await fetch(healthstats_url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        ...stats,
         message,
         signature: signedMessage.signature,
         address: signedMessage.address,
@@ -136,12 +136,79 @@ async function main() {
     const data = await response.json();
     console.log("✅ Health check sent successfully : ", data);
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes("Url scheme")) {
-      console.error("❌ Error: Invalid URL format. Please ensure HEALTH_CHECK_API includes http:// or https://");
-    } else {
-      console.error("❌ Error sending health check : ", error);
-    }
+    console.error("❌ Error sending health check : ", error);   
   }
 }
 
-main().catch(console.error);
+// Initial Registration check
+async function checkProviderRegistration() {
+  
+  if (!pair) {
+    await cryptoWaitReady();
+    const keyring = new Keyring();
+    const mnemonic = Deno.env.get("MNEMONIC");
+    pair = keyring.createFromUri(mnemonic);
+  }
+
+  try {
+    const response = await fetch(`${providers_url}/${pair?.address}`);
+    if (!response.ok) {
+      console.error("❌ Provider Registration check failed:", response.status);
+      return;
+    }
+    const data = await response.json();
+    state.isRegistered = data.address ? true : false;
+    console.log(`🔄 Provider registration status updated: ${state.isRegistered ? "validated" : "not validated"}`);
+  } catch (error) {
+    console.error("❌ Error checking provider registration:", error);
+  }
+}
+
+async function checkProviderValidation() {
+
+  try {
+    const response = await fetch(`${providers_url}/${pair?.address}`);
+    if (!response.ok) {
+      console.error("❌ Provider Registration check failed:", response.status);
+      return;
+    }
+    const data = await response.json();
+    state.isValidated = data.address ? true : false;
+    console.log(`🔄 Provider Validation status updated: ${state.isRegistered ? "validated" : "not validated"}`);
+  } catch (error) {
+    console.error("❌ Error checking provider registration:", error);
+  }
+}
+
+async function setupWallet() {
+  await cryptoWaitReady();
+  const keyring = new Keyring();
+  const mnemonic = Deno.env.get("MNEMONIC");
+  pair = keyring.createFromUri(mnemonic);
+ }
+
+async function init() {
+  await setupWallet();
+  providers_url = Deno.env.get("PROVIDERS_URL");
+  healthstats_url = Deno.env.get("HEALTHSTATS_URL");
+}
+
+// Run initialization, validation and health check
+await init();
+await checkProviderRegistration();
+if (state.isRegistered) {
+  await sendHealthCheck();
+}
+
+// Set up the cron job using stored validation state
+//Deno.cron("Provider Healtchecks Cron","*/5 * * * *", async () => {
+Deno.cron("Provider Healtchecks Cron","* * * * *", async () => {
+
+  if (state.isValidated) {
+    console.log("✅ Provider is validated. Running health check...");
+    await sendHealthCheck();
+  } else {
+    console.log("⚠️ Provider is NOT validated. Skipping health check.");
+    checkProviderValidation();
+  }
+});

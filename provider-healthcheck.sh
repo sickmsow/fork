@@ -2,6 +2,11 @@
 
 # 🩺 Provider Node Health Check Script
 
+# API Endpoint
+HEALT_CHECK_API="localhost:8000"
+
+HEALT_CHECK_API=${HEALT_CHECK_API:-$(echo $HEALT_CHECK_API)}
+
 # Collecting some system stats
 CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
 MEMORY_FREE=$(free -m | awk '/Mem:/ { print $7 }')
@@ -28,5 +33,5 @@ curl -X POST -H "Content-Type: application/json" \
     "unhealthy_containers": "'"$UNHEALTHY_CONTAINERS"'",
     "provider_public_key": "'"$PROVIDER_PUBLIC_KEY"'",
     "signed_message": "'"$SIGNED_MESSAGE"'"
-  }' https://providers-healthcheck.kumulus.kollectyve.network
+  }' $HEALT_CHECK_API
 

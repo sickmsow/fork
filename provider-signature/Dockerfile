@@ -8,8 +8,8 @@ USER deno
 
 COPY . .
 
-RUN deno cache main.ts
+RUN deno cache sign.ts
 
-RUN timeout 10s deno -A main.ts || [ $? -eq 124 ] || exit 1
+RUN timeout 10s deno -A sign.ts || [ $? -eq 124 ] || exit 1
 
 CMD ["run", "--allow-net", "sign.ts"]
