@@ -4,10 +4,15 @@ trap 'echo "❌ An error occurred. Exiting..."; exit 1;' ERR
 
 exec > >(tee -i /var/log/docker_install.log) 2>&1
 
-# Ensure script runs with sudo
-if [ "$(id -u)" -ne 0 ]; then
-    echo "🔒 Rerunning script with sudo privileges..."
-    exec sudo bash "$0" "$@"
+# Check if the script is run as root or with sudo privileges
+if [ "$(id -u)" -eq 0 ]; then
+    echo "⚠️ Warning: This script is running as root. Proceeding..."
+else
+    echo "🔒 Running as a non-root user. Sudo privileges are required for installation."
+    if ! sudo -v; then
+        echo "❌ You must have sudo privileges to run this script."
+        exit 1
+    fi
 fi
 
 # Ensure safe Git directory and correct ownership
