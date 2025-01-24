@@ -1,6 +1,6 @@
 # kumulus-provider
 
-Kumulus Cloud provider codebase
+Kumulus Cloud provider setup  codebase
 
 ### Provider Setup
 
@@ -14,34 +14,25 @@ So the setup can be done via `curl`
 curl -sL https://p8mdr58z51.execute-api.eu-north-1.amazonaws.com/default/kollectyve-provider-setup | bash
 ```
 
-### Provider Health check 🩺
+### Stats Collector Service 🩺
 
-#### Provider signature script
+#### To build the image (in isolation)
 
-Deno is used here
-
-```bash
-deno run --allow-read main.ts
+```sh
+docker buildx build -t provider-healthchecks .
 ```
 
-#### Automating the cron ⚙️
+#### To run locally and test
 
-- Edit the system's cron job file by typing in the terminal
+cd into `provider-healthchecks` folder
 
-```bash
-crontab -e
+```sh
+# To run
+docker run --network=host \
+  --mount type=bind,source="$(pwd)"/mnemonic.txt,target=/run/secrets/MNEMONIC_SECRET \
+  --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+  --group-add $(getent group docker | cut -d: -f3) \
+  provider-healthchecks
 ```
 
-- Add 5 mn interval to run the script
-
-```bash
-*/5 * * * * /path/to/health_check.sh >> /var/log/health_check.log 2>&1
-```
-
-## Test
-
-To execute test type
-
-```bash
-deno test --allow-run
-```
+### Provisioner Service 📦
