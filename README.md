@@ -4,15 +4,12 @@ Kumulus Cloud provider setup  codebase
 
 ### Provider Setup
 
-The provider setup (dev) script `provider.sh` is deployed at
-
-`https://p8mdr58z51.execute-api.eu-north-1.amazonaws.com/default/kollectyve-provider-setup`
-
-So the setup can be done via `curl`
+The provider setup (dev) via the script `provider-setup.sh` can be done via `curl`
 
 ```bash
-curl -sL https://p8mdr58z51.execute-api.eu-north-1.amazonaws.com/default/kollectyve-provider-setup | bash
+curl -sL https://raw.githubusercontent.com/kollectyve-labs/kumulus-provider/main/provider-setup/provider-setup.sh | bash
 ```
+## Other Components
 
 ### Stats Collector Service 🩺
 
