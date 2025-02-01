@@ -9,7 +9,7 @@ The provider setup (dev) via the script `provider-setup.sh` can be done via `cur
 ```bash
 curl -sL https://raw.githubusercontent.com/kollectyve-labs/kumulus-provider/main/provider-setup/provider-setup.sh | sudo bash
 ```
-## Other Components
+## Components (for islolated and lcal testing)
 
 ### Stats Collector Service 🩺
 
@@ -33,3 +33,16 @@ docker run --network=host \
 ```
 
 ### Provisioner Service 📦
+A curl example assuming the provider is registered
+
+```sh
+curl -X POST http://localhost:8080/create-vm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "mydevuser",
+    "sshKey": "ssh-rsa AAAAB3...",
+    "cpu": 1,
+    "memory": "512m",
+    "disk": "10G"
+  }'
+```

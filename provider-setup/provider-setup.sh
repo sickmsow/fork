@@ -114,7 +114,8 @@ export DOCKER_GID
 # Create .txt file for provider mnemonic
 if [ ! -f "${INSTALL_DIR}/mnemonic.txt" ]; then
     echo "🔑 Configuring mnemonic..."
-    read -p "Enter your MNEMONIC SECRET: " MNEMONIC_SECRET
+    echo "Enter your MNEMONIC SECRET: "
+    read MNEMONIC_SECRET < /dev/tty
     echo "${MNEMONIC_SECRET}" > "${INSTALL_DIR}/mnemonic.txt"
 fi
 
