@@ -13,11 +13,14 @@ export class StatsCollector {
   private state = {
     isValidated: false,
     isRegistered: false,
+    ipAddress: ,
   };
 
   pair: KeyringPair | null = null;
+
+  base_url = "https://test-kumulus-backend.deno.dev/kumulus";
   providers_url: string = "https://test-kumulus-backend.deno.dev/kumulus/providers";
-  healthstats_url: string = "https://test-kumulus-backend.deno.dev/healthstats";
+  healthstats_url: string = "https://test-kumulus-backend.deno.dev/kumulus/healthstats";
 
   async setupWallet() {
     await cryptoWaitReady();
@@ -25,21 +28,21 @@ export class StatsCollector {
     const mnemonic = Deno.env.get("MNEMONIC");
 
     if (!mnemonic) {
-      throw new Error("MNEMONIC environment variable is not set.");
+      console.error("❌ MNEMONIC environment variable is not set.");
+      return; 
     }
 
     this.pair = keyring.createFromUri(mnemonic);
   }
-
+  
   async signMessage(message: string) {
     if (!this.pair) {
       await this.setupWallet();
+      if (!this.pair) {
+        console.error("❌ Wallet setup failed. Check MNEMONIC and try again.");
+      }
     }
-    if (!this.pair) {
-      throw new Error("Wallet is not set up properly.");
-    }
-    const signature = u8aToHex(this.pair.sign(stringToU8a(message)));
-    return { signature, address: this.pair.address };
+    return { signature: u8aToHex(this.pair.sign(stringToU8a(message))), address: this.pair.address };
   }
 
   async checkDockerStatus(): Promise<{
@@ -204,7 +207,7 @@ export class StatsCollector {
     const stats = await this.getSystemStats();
     const message = JSON.stringify(stats);
     const signedMessage = await this.signMessage(message);
-
+    
     try {
       const response = await fetch(this.healthstats_url, {
         method: "POST",
@@ -249,6 +252,7 @@ export class StatsCollector {
         return;
       }
       const data = await response.json();
+      //TODO: Check Registration on chain and query directly onchain state
       this.state.isRegistered = data.address ? true : false;
       console.log(
         `🔄 Provider registration status: ${
@@ -281,6 +285,37 @@ export class StatsCollector {
     }
   }
 
+  async sendIpAddress() {
+    //Retrieve provider ip address
+    const ipAddress = await fetch('https://ident.me').then(res => res.text());
+    this.state.ipAddress = ipAddress;
+
+    const signedMessage = await this.signMessage(ipAddress);
+    
+    try {
+      const response = await fetch(this.healthstats_url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ipAddress,
+          signature: signedMessage.signature,
+          address: signedMessage.address,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(
+          `HTTP error! status: ${response.status}, body: ${errorData}`,
+        );
+      }
+
+      console.log("✅ Provider Ip Address sent successfully");
+    } catch (error) {
+      console.error("❌ Error sending Provider Ip Address:", error);
+    }
+  }
+
   getState() {
     return this.state;
   }
@@ -289,6 +324,7 @@ export class StatsCollector {
     await this.setupWallet();
     await this.checkProviderRegistration();
     if (this.state.isRegistered) {
+      await this.sendIpAddress();
       await this.sendHealthCheck();
     }
   }

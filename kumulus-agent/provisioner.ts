@@ -1,4 +1,4 @@
-import { Hono } from "https://deno.land/x/hono/mod.ts";
+import { Hono } from "@hono/hono";
 
 export const app = new Hono();
 
@@ -189,6 +189,152 @@ app.post("/create-vm", async (c) => {
     return c.json({ 
       error: "VM creation failed", 
       details: error.message 
+    }, 500);
+  }
+});
+
+// Stop VM by it's id vmId the we got from the create-vm endpoint   
+app.post("/stop-vm", async (c) => {
+  try {
+    const body: { vmId: string } = await c.req.json();
+    console.log(`[LOG] Received stop VM request for ID: ${body.vmId}`);
+
+    const stopResult = await runCommand('docker', [
+      'stop', body.vmId
+    ]);
+
+    console.log(`[LOG] Stop command exit code: ${stopResult.code}`);
+
+    if (stopResult.code !== 0) {
+      console.error(`[ERROR] Docker stop failed`);
+      console.error(`[ERROR] Stop stderr: ${stopResult.stderr}`);
+      console.error(`[ERROR] Stop stdout: ${stopResult.stdout}`);
+    }
+
+    return c.json({
+      message: "VM stopped successfully"
+    }, 200);
+  } catch (error) {
+    console.error(`[FATAL ERROR] VM stop failed: ${error.message}`);
+    console.error(`[FATAL ERROR] Error stack: ${error.stack}`);
+    
+    return c.json({
+      error: "VM stop failed",
+      details: error.message
+    }, 500);
+  }
+});
+
+// Start VM by it's id vmId the we got from the create-vm endpoint
+app.post("/start-vm", async (c) => {
+  try {
+    const body: { vmId: string } = await c.req.json();
+
+    const startResult = await runCommand('docker', [
+      'start', body.vmId
+    ]);
+
+    console.log(`[LOG] Start command exit code: ${startResult.code}`);
+    
+    if (startResult.code !== 0) {
+      console.error(`[ERROR] Docker start failed`);
+      console.error(`[ERROR] Start stderr: ${startResult.stderr}`);
+      console.error(`[ERROR] Start stdout: ${startResult.stdout}`);
+    }
+
+    return c.json({
+      message: "VM started successfully"
+    }, 200);
+  } catch (error) {
+    console.error(`[FATAL ERROR] VM start failed: ${error.message}`);
+    console.error(`[FATAL ERROR] Error stack: ${error.stack}`);
+
+    return c.json({
+      error: "VM start failed",
+      details: error.message
+    }, 500);
+  }
+});
+
+// Get the status of the VM by it's id vmId the we got from the create-vm endpoint
+app.post("/get-vm-status", async (c) => {
+  try {
+    const body: { vmId: string } = await c.req.json();
+    console.log(`[LOG] Received get VM status request for ID: ${body.vmId}`);
+
+    const statusResult = await runCommand('docker', [
+      'ps', '-f', `id=${body.vmId}`, '-q'
+    ]);
+
+    console.log(`[LOG] Status command exit code: ${statusResult.code}`);
+
+    if (statusResult.code !== 0) {
+      console.error(`[ERROR] Docker ps failed`);
+      console.error(`[ERROR] Status stderr: ${statusResult.stderr}`);
+      console.error(`[ERROR] Status stdout: ${statusResult.stdout}`);
+    }
+
+    return c.json({
+      status: "Running"
+    }, 200);
+  } catch (error) {
+    console.error(`[FATAL ERROR] VM status retrieval failed: ${error.message}`);
+    console.error(`[FATAL ERROR] Error stack: ${error.stack}`);
+    
+    return c.json({
+      error: "VM status retrieval failed",
+      details: error.message
+    }, 500);
+  }
+});
+
+// Get the logs of the VM by it's id vmId the we got from the create-vm endpoint
+app.post("/get-vm-logs", async (c) => {
+  try {
+    const body: { vmId: string } = await c.req.json();
+
+    const logsResult = await runCommand('docker', [
+      'logs', body.vmId
+    ]);
+
+    console.log(`[LOG] Logs command exit code: ${logsResult.code}`);
+
+    return c.json({
+      logs: logsResult.stdout
+    }, 200);
+  } catch (error) {
+    console.error(`[FATAL ERROR] VM logs retrieval failed: ${error.message}`);
+    console.error(`[FATAL ERROR] Error stack: ${error.stack}`);
+    
+    return c.json({
+      error: "VM logs retrieval failed",
+      details: error.message
+    }, 500);
+  }
+});
+
+// Delete the VM by it's id vmId the we got from the create-vm endpoint
+app.post("/delete-vm", async (c) => {
+  try {
+    const body: { vmId: string } = await c.req.json();
+    console.log(`[LOG] Received delete VM request for ID: ${body.vmId}`);
+
+    const deleteResult = await runCommand('docker', [
+      'rm', '-f', body.vmId
+    ]);
+
+    console.log(`[LOG] Delete command exit code: ${deleteResult.code}`);
+
+    return c.json({
+      message: "VM deleted successfully"
+    }, 200);
+  } catch (error) {
+    console.error(`[FATAL ERROR] VM deletion failed: ${error.message}`);
+    console.error(`[FATAL ERROR] Error stack: ${error.stack}`);
+
+    return c.json({
+      error: "VM deletion failed",
+      details: error.message
     }, 500);
   }
 });
