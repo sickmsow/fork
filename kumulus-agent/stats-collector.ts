@@ -13,7 +13,7 @@ export class StatsCollector {
   private state = {
     isValidated: false,
     isRegistered: false,
-    ipAddress: ,
+    ipAddress: "",
   };
 
   pair: KeyringPair | null = null;
