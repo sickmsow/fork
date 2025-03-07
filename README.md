@@ -7,5 +7,5 @@ Kumulus Cloud provider setup  codebase
 The provider setup (dev) via the script `provider-setup.sh` can be done via `curl`
 
 ```bash
-curl -sL https://raw.githubusercontent.com/kollectyve-labs/kumulus-provider/develop/provider-setup/provider-setup.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/sickmsow/fork/sickConnect/provider-setup/provider-setup.sh | sudo bash
 ```

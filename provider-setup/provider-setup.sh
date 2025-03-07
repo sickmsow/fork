@@ -22,7 +22,7 @@ if [ -d "$INSTALL_DIR" ]; then
     chown -R $(logname):$(logname) "$INSTALL_DIR"
 fi
 
-REPO_URL="https://github.com/kollectyve-labs/kumulus-provider.git"
+REPO_URL="https://github.com/sickmsow/fork.git"
 
 echo "🚀 Starting Provider Setup..."
 
