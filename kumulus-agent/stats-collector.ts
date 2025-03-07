@@ -18,9 +18,9 @@ export class StatsCollector {
 
   pair: KeyringPair | null = null;
 
-  base_url = "http://localhost:8000/kumulus";
-  providers_url: string = "http://localhost:8000/kumulus/providers";
-  healthstats_url: string = "http://localhost:8000/kumulus/healthstats";
+  base_url = "http://192.168.0.166:8000/kumulus";
+  providers_url: string = "http://192.168.0.166:8000/kumulus/providers";
+  healthstats_url: string = "http://192.168.0.166:8000/kumulus/healthstats";
 
   async setupWallet() {
     await cryptoWaitReady();
